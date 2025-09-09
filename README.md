@@ -4,7 +4,7 @@ Interactive map + charts for **ASOS (Automated Surface Observing Systems)** weat
 Built for the **WindBorne Systems – Software Engineering Intern (Product)** challenge.
 
 **Live Demo:** https://<your-vercel-domain>.vercel.app  
-**Repository:** https://github.com/<you>/<repo>
+**Repository:** https://github.com/Rohitmaan2012/windborne-asos
 
 ---
 
