@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WindBorne ASOS Explorer
 
-## Getting Started
+Interactive map + charts for **ASOS (Automated Surface Observing Systems)** weather stations.  
+Built for the **WindBorne Systems – Software Engineering Intern (Product)** challenge.
 
-First, run the development server:
+**Live Demo:** https://<your-vercel-domain>.vercel.app  
+**Repository:** https://github.com/<you>/<repo>
+
+---
+
+## ✨ Features
+
+- 🗺️ **Clustered map** of ~6k ASOS stations (smooth bubbles with counts)
+- 🔎 **Search** by station id / name / city / state
+- 📊 **Station details** page with time-series charts (temperature, wind, pressure, precip) + raw data table
+- 🧼 **Data sanitization** for corrupted upstream rows (type guards + null-safe fields)
+- ⚡ **Server routes** with simple **rate limiting** and **LRU caching**
+- 🧭 **Friendly 404** for unknown stations or empty history
+- 🎨 Clean Carto Light basemap, round bubbles for clusters **and** single stations
+
+---
+
+## 🧰 Tech Stack
+
+- **Next.js (App Router)** + **TypeScript**
+- **React-Leaflet v5** + **Supercluster** (clustering)
+- **Recharts** (charts)
+- **Tailwind** utility classes (via `globals.css`)
+- **LRU Cache** + tiny **rateLimiter**
+- Deployed on **Vercel**
+
+---
+
+## 🔌 Upstream API
+
+WindBorne’s public API (rate-limited ~20/min):
+
+- `https://sfc.windbornesystems.com/stations`
+- `https://sfc.windbornesystems.com/historical_weather?station={ID}`
+
+This app fronts those with server routes:
+
+- `GET /api/stations` → normalized `Station[]`
+- `GET /api/historical?station={ID}` → `{ data: HistoricalRecord[], warnings: string[] }`
+
+---
+
+## ▶️ Local Development
 
 ```bash
+# 1) Install deps
+npm install
+
+# 2) Env var (base URL used by server code)
+#    Create .env.local at project root:
+#    NEXT_PUBLIC_BASE_URL=http://localhost:3000
+
+# 3) Run dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# 4) Open
+# http://localhost:3000
