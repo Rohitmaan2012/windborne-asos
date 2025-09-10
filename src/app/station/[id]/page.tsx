@@ -5,19 +5,22 @@ import StationMeta from "@/components/StationMeta";
 import Charts from "@/components/Charts";
 import DataTable from "@/components/DataTable";
 import type { HistoricalPayload, Station } from "@/lib/types";
+import { headers } from "next/headers";
 
-/** Use an absolute origin for server-side fetches */
-function getOrigin() {
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
+async function getOriginFromHeaders() {
+  const h = await headers(); // ← MUST await in your Next version
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return host ? `${proto}://${host}` : "http://localhost:3000";
 }
 
 async function fetchStations(): Promise<Station[]> {
-  const r = await fetch(`${getOrigin()}/api/stations`, { cache: "force-cache" });
+  const origin = await getOriginFromHeaders();
+  const r = await fetch(`${origin}/api/stations`, { cache: "force-cache" });
+  if (!r.ok) return [];
+
   const raw: unknown = await r.json();
 
-  // Accept: array OR { data: [...] } OR { stations: [...] }
   const list: unknown[] = Array.isArray(raw)
     ? raw
     : (typeof raw === "object" &&
@@ -29,21 +32,22 @@ async function fetchStations(): Promise<Station[]> {
          [])
       : [];
 
-  // Normalize to Station[]
   const stations: Station[] = (list as Record<string, unknown>[]).flatMap((o) => {
-    // Prefer 4-letter ICAO; otherwise prefix K for 3-letter US codes with a state
     let icao =
       (typeof o.station === "string" && o.station) ||
       (typeof o.station_id === "string" && o.station_id) ||
-      (typeof (o as Record<string, unknown>).icao === "string" && (o as Record<string, unknown>).icao) || null;
+      (typeof (o as Record<string, unknown>).icao === "string" && (o as Record<string, unknown>).icao) ||
+      null;
 
     const code =
       (typeof o.id === "string" && o.id) ||
-      (typeof o.code === "string" && o.code) || null;
+      (typeof o.code === "string" && o.code) ||
+      null;
 
     if (!icao && code && code.length === 3 && typeof o.state === "string") {
       icao = `K${code.toUpperCase()}`;
     }
+
     const id = String(icao || code || "").toUpperCase();
 
     const obj = o as Record<string, unknown>;
@@ -53,9 +57,10 @@ async function fetchStations(): Promise<Station[]> {
 
     return [{
       id,
-      name: (o.name as string | undefined)
-        ?? (obj.station_name as string | undefined)
-        ?? (obj.description as string | undefined),
+      name:
+        (o.name as string | undefined) ??
+        (obj.station_name as string | undefined) ??
+        (obj.description as string | undefined),
       city: obj.city as string | undefined,
       state: obj.state as string | undefined,
       latitude: lat,
@@ -68,14 +73,15 @@ async function fetchStations(): Promise<Station[]> {
 }
 
 async function fetchHistorical(id: string): Promise<HistoricalPayload> {
+  const origin = await getOriginFromHeaders();
   const r = await fetch(
-    `${getOrigin()}/api/historical?station=${encodeURIComponent(id)}`,
+    `${origin}/api/historical?station=${encodeURIComponent(id)}`,
     { cache: "no-store" }
   );
   return r.json();
 }
 
-// ⬇️ NOTE: params is a Promise in Next 15’s newer types for dynamic segments
+// Next 15: params is a Promise for dynamic segments
 export default async function StationPage(
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -86,11 +92,8 @@ export default async function StationPage(
     fetchHistorical(id),
   ]);
 
-  // Find the station (case-insensitive)
-  const s =
-    stations.find((st) => st.id.toUpperCase() === id.toUpperCase());
+  const s = stations.find((st) => st.id.toUpperCase() === id.toUpperCase());
 
-  // 404 if station is unknown or history is empty
   if (!s || !Array.isArray(hist.data) || hist.data.length === 0) {
     notFound();
   }
